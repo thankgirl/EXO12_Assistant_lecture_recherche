@@ -49,6 +49,16 @@ COPY governance/ governance/
 # SETUP_PROCEDURE.md section 9) - fournie a l'execution via une variable
 # d'environnement (`docker run -e ANTHROPIC_API_KEY=...`) ou un Secret OpenShift.
 
+# OpenShift fait tourner les conteneurs avec un UID ALEATOIRE non-root par defaut
+# (Security Context Constraints "restricted") - contrairement a un simple
+# "docker run" en local (root par defaut ici, faute de USER precise), l'appli
+# plante en PermissionError des qu'elle essaie de creer un dossier sous /app en
+# conditions reelles OpenShift (ex: contexte_system/, LectureAssisteContexte/, crees
+# a l'execution, pas presents dans l'image). Correctif standard Red Hat : donner au
+# groupe root (GID 0, TOUJOURS present pour l'UID aleatoire d'OpenShift, quel qu'il
+# soit) les memes droits que le proprietaire sur /app.
+RUN chgrp -R 0 /app && chmod -R g=u /app
+
 EXPOSE 8501
 
 # --server.address=0.0.0.0 : par defaut Streamlit n'ecoute que sur localhost DANS le
