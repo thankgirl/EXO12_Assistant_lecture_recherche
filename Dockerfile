@@ -59,6 +59,28 @@ COPY governance/ governance/
 # soit) les memes droits que le proprietaire sur /app.
 RUN chgrp -R 0 /app && chmod -R g=u /app
 
+# Meme famille de piege, rencontre une 2e fois (2026-09-18) : l'UID aleatoire n'a
+# aucune entree dans /etc/passwd, donc son "home" retombe sur "/" (racine du
+# systeme, jamais inscriptible) - HuggingFace (telechargement du modele
+# d'embeddings, providers/vector_store_provider.py) essaie d'y creer ~/.cache et
+# plante en PermissionError sur '/.cache'. Fixer HOME sur un dossier deja ouvert
+# en ecriture (/app, voir juste au-dessus) resout cette famille entiere de
+# problemes (cache HuggingFace, pip, config diverses) d'un coup, plutot que de
+# corriger chaque bibliotheque une par une au fil des erreurs.
+ENV HOME=/app
+
+# 3e symptome de la meme famille (2026-09-18), plus fondamental : l'UID aleatoire
+# OpenShift n'a AUCUNE entree dans /etc/passwd (connu seulement au demarrage du
+# pod, pas au moment du build) - torch plante avec "KeyError: getpwuid(): uid not
+# found" des qu'une bibliotheque appelle getpass.getuser()/pwd.getpwuid(), meme
+# avec HOME deja fixe. /etc/passwd doit etre inscriptible par le groupe root (GID 0)
+# pour que le script de demarrage (entrypoint.sh) puisse y enregistrer l'UID
+# assigne au lancement, avant que quoi que ce soit d'autre ne s'execute.
+RUN chmod g=u /etc/passwd
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+ENTRYPOINT ["/entrypoint.sh"]
+
 EXPOSE 8501
 
 # --server.address=0.0.0.0 : par defaut Streamlit n'ecoute que sur localhost DANS le
