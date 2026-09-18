@@ -1,0 +1,34 @@
+# k8s/deployment.yaml — deploiement OpenShift (pipeline Tekton, exercice 10)
+#
+# Nom du Deployment ET du conteneur = deployment-name passe au pipeline
+# (tkn pipeline start ... -p deployment-name=exo12-assistant-rag) - la tache
+# update-deployment du pipeline s'appuie sur cette correspondance pour savoir quel
+# conteneur pointer vers l'image fraichement construite.
+#
+# ANTHROPIC_API_KEY : jamais ici en valeur - reference un Secret cree a la main sur le
+# cluster (oc create secret generic exo12-anthropic-secret --from-literal=...), jamais
+# commis dans ce depot public.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: exo12-assistant-rag
+  labels:
+    app: exo12-assistant-rag
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: exo12-assistant-rag
+  template:
+    metadata:
+      labels:
+        app: exo12-assistant-rag
+    spec:
+      containers:
+        - name: exo12-assistant-rag
+          image: image-registry.openshift-image-registry.svc:5000/a-elsa-dev/exo12-assistant-rag:latest
+          ports:
+            - containerPort: 8501
+          envFrom:
+            - secretRef:
+                name: exo12-anthropic-secret

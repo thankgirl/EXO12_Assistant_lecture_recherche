@@ -1,0 +1,14 @@
+# k8s/route.yaml — expose le Service VERS L'EXTERIEUR (specifique OpenShift, pas un
+# concept Kubernetes generique) - sans ca, l'app reste injoignable depuis un navigateur
+# meme une fois deployee. Piege deja rencontre avec pipelines-vote-api (Route absente,
+# necessite "oc expose service/..." a la main) - la fournir ici directement pour l'eviter.
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: exo12-assistant-rag
+spec:
+  to:
+    kind: Service
+    name: exo12-assistant-rag
+  port:
+    targetPort: 8501

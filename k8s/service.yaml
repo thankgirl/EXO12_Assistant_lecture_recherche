@@ -1,0 +1,14 @@
+# k8s/service.yaml — expose le Deployment DANS le cluster (pas encore vers l'exterieur,
+# voir route.yaml pour ca). selector doit correspondre au label du pod (deployment.yaml).
+apiVersion: v1
+kind: Service
+metadata:
+  name: exo12-assistant-rag
+  labels:
+    app: exo12-assistant-rag
+spec:
+  selector:
+    app: exo12-assistant-rag
+  ports:
+    - port: 8501
+      targetPort: 8501
