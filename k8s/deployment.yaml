@@ -34,15 +34,19 @@ spec:
                 name: exo12-anthropic-secret
           # Sans ce bloc, le LimitRange du namespace (resource-limits) impose une
           # limite par defaut de seulement 1000Mi - trop juste pour torch/
-          # transformers/chromadb/streamlit charges ensemble, cause du OOMKilled
+          # transformers/chromadb/streamlit charges ensemble, cause du 1er OOMKilled
           # constate le 2026-09-18 (pod tue des le premier upload de document,
           # exactement le moment ou le modele d'embeddings est charge en memoire).
-          # Namespace verifie large (quota compute-deploy : 30Gi au total), 2Gi de
-          # marge confortable sans rien saturer.
+          # 2Gi (1ere valeur choisie) s'est avere encore insuffisant : 2e OOMKilled
+          # constate le meme jour, cette fois sur le cumul reel modele d'embeddings +
+          # traitement du PDF (unstructured/spacy) + appel RAG simultanes. Namespace
+          # verifie tres large (quota compute-deploy : 30Gi/30 CPU au total, 2Gi/1
+          # CPU utilises avant ce changement) - 4Gi/2 CPU restent une fraction
+          # infime du quota disponible.
           resources:
             requests:
-              memory: "512Mi"
-              cpu: "250m"
+              memory: "1Gi"
+              cpu: "500m"
             limits:
-              memory: "2Gi"
-              cpu: "1"
+              memory: "4Gi"
+              cpu: "2"
