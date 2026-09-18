@@ -1,0 +1,12 @@
+# Groupe 1/4 — coeur de l'app (Streamlit, config, validation, calcul)
+# Voir requirements-deploy.txt (racine du dossier) pour l'explication generale du
+# choix des dependances. Ce fichier n'existe que pour etre installe separement
+# dans le Dockerfile (voir section "STEP 6..." ) et limiter le pic memoire du
+# resolveur pip lors du build sur le pipeline OpenShift (OOMKilled constate le
+# 2026-09-18 avec un seul gros pip install regroupant tout).
+
+streamlit==1.61.1
+python-dotenv==1.2.3
+PyYAML==6.0.3
+pydantic==2.13.4
+numpy==2.4.6

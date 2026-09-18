@@ -1,0 +1,10 @@
+# Groupe 3/4 — base vectorielle + embeddings locaux (le plus lourd a resoudre :
+# chromadb entraine kubernetes client, opentelemetry, grpc... d'ou l'interet de
+# l'isoler dans son propre pip install, voir requirements-deploy-1-core.txt).
+
+chromadb==1.5.9
+sentence-transformers==5.6.1
+# grpcio fige (dependance transitive de chromadb, telemetrie) - une version plus
+# recente (1.83.1) bloque au demarrage sous Windows (Smart App Control, DLL) ;
+# sans impact connu en conteneur Linux, garde par coherence avec le reste du projet.
+grpcio==1.63.2

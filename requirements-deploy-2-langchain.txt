@@ -1,0 +1,11 @@
+# Groupe 2/4 — LangChain (RAG : loaders, splitter, prompt, embeddings, vectorstore)
+# Voir requirements-deploy-1-core.txt pour l'explication du decoupage en plusieurs
+# fichiers.
+
+langchain-anthropic==1.6.1
+langchain-community==0.4.2
+langchain-core==1.6.0
+langchain-huggingface==1.2.2
+langchain-openai==1.6.0
+langchain-text-splitters==1.1.2
+langchain-chroma==1.1.0

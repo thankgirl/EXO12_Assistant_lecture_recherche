@@ -1,50 +1,20 @@
 # requirements-deploy.txt — dependances du DEPLOIEMENT (niveau 1 uniquement)
 #
-# requirements.txt (a la racine, non utilise ici) est un dump complet du venv de
-# l'exercice, niveau 1 (RAG/conversations) + niveau 2/3 (audio : kokoro-onnx,
-# piper-tts, dia2, openai-whisper, faster-whisper, gradio...) melanges - beaucoup
-# trop lourd pour l'app Streamlit qu'on deploie ici (main.py), qui n'utilise que le
-# niveau 1. Liste construite le 2026-09-18 a partir des imports reels de main.py et
-# de tout ce qu'il appelle (core/, services/, providers/, interfaces/), versions
-# figees sur ce qui est deja installe et teste dans le venv (docs/dependencies.md
-# reste la reference pour le detail/l'historique de chaque choix).
+# Ce fichier a ete SCINDE en 4 (2026-09-18) pour corriger un OOMKilled recurrent
+# sur la tache "build-image" du pipeline Tekton : un seul gros pip install fait
+# calculer a pip TOUT le graphe de dependances (chromadb, unstructured/spacy,
+# toute la famille langchain...) en une seule fois, ce qui depasse la limite
+# memoire par defaut de cette tache. Voir le Dockerfile (RUN pip install
+# successifs) et les fichiers ci-dessous, chacun installe separement pour reduire
+# le pic memoire du resolveur a chaque etape :
+#   - requirements-deploy-1-core.txt        (streamlit, config, calcul)
+#   - requirements-deploy-2-langchain.txt   (famille LangChain)
+#   - requirements-deploy-3-vectorstore.txt (chromadb, sentence-transformers)
+#   - requirements-deploy-4-documents.txt   (extraction documents, scikit-learn, anthropic)
+#
+# requirements.txt (a la racine, non utilise ici) reste un dump complet du venv
+# de l'exercice, niveau 1+2+3 melanges - non pertinent pour ce deploiement.
 #
 # torch : PAS de version ici avec "+cu128" (build CUDA, plusieurs Go, inutile sans
 # GPU) - installe separement dans le Dockerfile depuis l'index CPU officiel
 # PyTorch (voir Dockerfile).
-
-streamlit==1.61.1
-python-dotenv==1.2.3
-PyYAML==6.0.3
-pydantic==2.13.4
-numpy==2.4.6
-
-# LangChain (RAG : loaders, splitter, prompt, embeddings, vectorstore)
-langchain-anthropic==1.6.1
-langchain-community==0.4.2
-langchain-core==1.6.0
-langchain-huggingface==1.2.2
-langchain-openai==1.6.0
-langchain-text-splitters==1.1.2
-langchain-chroma==1.1.0
-
-# Base vectorielle + embeddings locaux
-chromadb==1.5.9
-sentence-transformers==5.6.1
-# grpcio fige (dependance transitive de chromadb, telemetrie) - une version plus
-# recente (1.83.1) bloque au demarrage sous Windows (Smart App Control, DLL) ;
-# sans impact connu en conteneur Linux, garde par coherence avec le reste du projet.
-grpcio==1.63.2
-
-# Extraction de documents (PDF/.doc/.xls, cf types_autorises dans
-# governance/guardrails/input_guardrails.yaml)
-pypdf==6.16.2
-docx2txt==0.9
-unstructured==0.27.5
-
-# Recherche selective dans l'historique de conversation (core/context_manager.py,
-# palier 2 - similarite cosinus en memoire)
-scikit-learn==1.9.0
-
-# Appel direct a l'API Anthropic (ClaudeProvider.count_tokens, providers/LLM_providers.py)
-anthropic==0.125.0

@@ -1,0 +1,14 @@
+# Groupe 4/4 — extraction de documents + reste (unstructured entraine sa propre
+# chaine lourde spacy/thinc/numba/llvmlite, d'ou l'interet de l'isoler, voir
+# requirements-deploy-1-core.txt).
+
+pypdf==6.16.2
+docx2txt==0.9
+unstructured==0.27.5
+
+# Recherche selective dans l'historique de conversation (core/context_manager.py,
+# palier 2 - similarite cosinus en memoire)
+scikit-learn==1.9.0
+
+# Appel direct a l'API Anthropic (ClaudeProvider.count_tokens, providers/LLM_providers.py)
+anthropic==0.125.0

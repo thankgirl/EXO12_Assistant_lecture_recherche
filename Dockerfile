@@ -22,18 +22,34 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libmagic1 \
     && rm -rf /var/lib/apt/lists/*
 
-# requirements-deploy.txt copie seul, AVANT le reste du code : profite du cache de
+# Fichiers de dependances copies seuls, AVANT le reste du code : profite du cache de
 # build par couches de Docker (voir DOCKER_MODE_OPERATOIRE.md, section 0.1) - tant que
-# ce fichier ne change pas, Docker reutilise la couche d'installation deja construite
-# au lieu de tout reinstaller a chaque modification de main.py.
-COPY requirements-deploy.txt .
+# ces fichiers ne changent pas, Docker reutilise la couche d'installation deja
+# construite au lieu de tout reinstaller a chaque modification de main.py.
+COPY requirements-deploy-1-core.txt requirements-deploy-2-langchain.txt \
+     requirements-deploy-3-vectorstore.txt requirements-deploy-4-documents.txt .
 
 # torch en version CPU (pas la build CUDA "+cu128" du venv local - inutile et enorme
 # sans GPU dans le conteneur) - installe separement, depuis l'index officiel PyTorch
 # CPU, AVANT le reste des dependances (qui en ont besoin en transitif via
 # sentence-transformers).
 RUN pip install --no-cache-dir torch==2.11.0 --index-url https://download.pytorch.org/whl/cpu
-RUN pip install --no-cache-dir -r requirements-deploy.txt
+
+# Installation en 4 etapes separees (et non un seul "pip install -r
+# requirements-deploy.txt" regroupant tout) : constate le 2026-09-18, la tache
+# "build-image" du pipeline Tekton echouait en OOMKilled (code 137) sur 2
+# tentatives consecutives et identiques a l'etape de resolution des dependances -
+# pip doit calculer un graphe de compatibilite entre TOUTES les bibliotheques a la
+# fois (chromadb, unstructured/spacy, toute la famille langchain...), ce qui fait
+# grimper le pic memoire bien au-dela de la limite par defaut de cette tache
+# partagee du cluster (differente de la limite du Deployment, deja ajustee
+# plus haut dans ce fichier). Decouper en 4 "pip install" plus petits fait
+# resoudre chaque groupe independamment : meme resultat final installe, pic
+# memoire par etape bien plus bas.
+RUN pip install --no-cache-dir -r requirements-deploy-1-core.txt
+RUN pip install --no-cache-dir -r requirements-deploy-2-langchain.txt
+RUN pip install --no-cache-dir -r requirements-deploy-3-vectorstore.txt
+RUN pip install --no-cache-dir -r requirements-deploy-4-documents.txt
 
 # Code de l'application - niveau 1 uniquement.
 COPY main.py .
