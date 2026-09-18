@@ -32,3 +32,17 @@ spec:
           envFrom:
             - secretRef:
                 name: exo12-anthropic-secret
+          # Sans ce bloc, le LimitRange du namespace (resource-limits) impose une
+          # limite par defaut de seulement 1000Mi - trop juste pour torch/
+          # transformers/chromadb/streamlit charges ensemble, cause du OOMKilled
+          # constate le 2026-09-18 (pod tue des le premier upload de document,
+          # exactement le moment ou le modele d'embeddings est charge en memoire).
+          # Namespace verifie large (quota compute-deploy : 30Gi au total), 2Gi de
+          # marge confortable sans rien saturer.
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "250m"
+            limits:
+              memory: "2Gi"
+              cpu: "1"
