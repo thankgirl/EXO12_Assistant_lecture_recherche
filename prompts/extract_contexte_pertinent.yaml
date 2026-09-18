@@ -1,0 +1,9 @@
+extract_contexte_pertinent:
+  v1:
+    description: "résume un contexte devenu trop long"
+    template: |
+       La taille de ce contexte {contexte} a atteint le seuil autorisé, afin que l'utilisateur 
+       puisse continuer la conversation, ton objectif est de trouver le meilleur résumé possible 
+       afin de réduire la taille du contenu ton en conservant l'essentiel pour continuer la conversation
+       le contexte doit te permettre de fournir une réponse pertinente à la question {query} de l'utilisateur
+       le format de sortie doit respecter le format du fichier en entrée

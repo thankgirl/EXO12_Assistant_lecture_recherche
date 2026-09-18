@@ -1,0 +1,7 @@
+# governance/guardrails/input_guardrails.yaml — regles de validation des fichiers entrants (CTX-3)
+# A lire depuis upload_files.py (candidat pour devenir core/file_validator.py) -
+# jamais code en dur dans le validateur lui-meme.
+
+fichiers_document:
+  types_autorises: [".pdf",".doc",".txt",".xls",".csv"]   
+  taille_max_mo: 1   

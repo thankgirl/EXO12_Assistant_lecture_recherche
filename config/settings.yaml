@@ -1,0 +1,17 @@
+# config/settings.yaml — parametres externalises (LLM-2, LLM-3)
+
+llm:
+  timeout_secondes: 5
+  max_tentatives: 3
+  delai_entre_tentatives_secondes: 20
+
+limites:
+  max_tokens_par_requete: 5000
+  max_cout_euros_par_session: 0.5  # decide en 1er (produit, pas technique) - X/L en dessous en decoulent, voir architecture.md
+  max_pages_pdf: 100  # specifique CTX-1/CTX-3 ici
+
+  # CTX-1 (core/context_manager.py) - seuils des 3 paliers, decides le 2026-08-27,
+  # pas encore chiffres (dependent de max_cout_euros_par_session ci-dessus) :
+  seuil_resume_tokens: 140000           # palier 1 : au-dela, resumer les echanges anciens
+  seuil_recherche_selective_tokens: 200000  # palier 2 : au-dela, RAG sur l'historique plutot que tout injecter
+  seuil_nouvelle_conversation_tokens: 260000  # palier 3 : au-dela, proposer/forcer une nouvelle conversation

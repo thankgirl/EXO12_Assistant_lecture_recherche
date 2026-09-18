@@ -1,0 +1,34 @@
+# Sans ce fichier, Docker envoie TOUT ce dossier (contexte de build) au demon avant
+# meme de commencer - y compris le venv local (plusieurs Go, torch CUDA inclus) et les
+# donnees generees a l'usage. Meme si ces dossiers ne sont jamais COPY-es dans l'image,
+# les exclure ici accelere enormement chaque "docker build" et evite toute fuite
+# accidentelle (secrets, donnees locales) vers le contexte de build.
+
+venv/
+__pycache__/
+*.pyc
+
+# Secrets - jamais dans l'image (voir GESTION_CLES_API.md)
+.env
+
+# Donnees generees a l'usage - propres a CETTE machine, pas a l'image
+download_db/
+LectureAssisteContexte/
+contexte_system/
+temp/
+
+# Niveau 2/3 (audio) et outils de test - pas concernes par ce deploiement niveau 1
+audio_local/
+simulations_contexte_manager/
+fichiers_test_manuel/
+model_registry.yaml
+
+# Documentation - inutile dans l'image
+docs/
+architecture.md
+ENONCE.md
+*.md
+
+# Dependances completes du venv (niveau 1+2+3 melanges) - requirements-deploy.txt
+# (scope niveau 1 uniquement) est utilise a la place, voir Dockerfile.
+requirements.txt
