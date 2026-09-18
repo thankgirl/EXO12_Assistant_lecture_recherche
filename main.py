@@ -63,10 +63,10 @@ TYPES_AUTORISES = [ext.lstrip(".") for ext in guardrails_param["fichiers_documen
 
 # ============================================================
 # TODO (mis a jour le 2026-09-17) :
-# 1. db = ChromeDb(...) : reste a la mettre en cache (@st.cache_resource sur une
-#    fonction dediee), pas reconstruite a chaque rerun Streamlit. Complique un peu par
-#    le fait que collection_name depend maintenant de la conversation active (point 2) -
-#    la fonction cachee devra prendre collection_name en parametre.
+# 1. db = ChromeDb(...) -> fait le 2026-09-18 : @st.cache_resource sur get_db(),
+#    collection_name en parametre (voir juste avant main()). Revele en deployant sur
+#    OpenShift (pod limite en ressources) : sans ca, le modele d'embeddings etait
+#    recharge a chaque interaction, lenteurs/blocages intermittents.
 # 2. CONVERSATIONS -> fait le 2026-09-17 : menu deroulant (nouvelle/existante),
 #    ChromeDb initialisee APRES le choix de la conversation (collection_name derive de
 #    id_conversation, isole chaque conversation dans sa propre collection Chroma),
@@ -101,6 +101,22 @@ TYPES_AUTORISES = [ext.lstrip(".") for ext in guardrails_param["fichiers_documen
 # comme point 7 ici le 2026-09-17, deplace le meme jour vers SUJETS_APPROFONDIR_PLUS_TARD.md :
 # ne bloque pas la fin du niveau 1, pas a melanger avec le TODO actif)
 # ============================================================
+
+# TODO #1 (fait le 2026-09-18) : sans @st.cache_resource, ChromeDb() etait reconstruite
+# a CHAQUE interaction (Streamlit relance tout main() a chaque clic) - donc le modele
+# d'embeddings etait recharge en memoire depuis zero a chaque fois. Invisible en local
+# (CPU/RAM larges), mais source de lenteurs/blocages intermittents sur le pod OpenShift
+# limite en ressources (constate le 2026-09-18 : "ca analyse, puis rien" au 1er essai,
+# fonctionne au 2e - le rechargement du modele prenait plus de temps que ce que
+# l'utilisateur attendait avant de recliquer). collection_name en parametre de la
+# fonction cachee (pas juste sur ChromeDb()) : Streamlit met en cache PAR JEU DE
+# PARAMETRES - une conversation differente (collection_name different) reconstruit
+# bien sa propre instance, mais revenir sur une conversation deja visitee reutilise
+# l'instance deja chargee, sans recharger le modele.
+@st.cache_resource
+def get_db(collection_name: str) -> ChromeDb:
+    return ChromeDb(collection_name=collection_name)
+
 
 def main():
     st.set_page_config(page_title="Assistant apprentissage", page_icon="🔄")
@@ -235,7 +251,9 @@ def main():
                 st.session_state.pop("synthese", None)
 
     # --- A partir d'ici, une conversation est active : ChromeDb isolee par conversation ---
-    db = ChromeDb(collection_name=f"conversation_{st.session_state.id_conversation}")
+    # get_db() (pas ChromeDb() directement, depuis le 2026-09-18) : mise en cache par
+    # collection_name, voir la fonction juste avant main() pour le detail complet.
+    db = get_db(f"conversation_{st.session_state.id_conversation}")
 
     # Chemin du fichier JSON de la conversation active - calcule sans condition ici
     # (pas seulement dans la branche de rechargement ci-dessus) pour etre disponible
