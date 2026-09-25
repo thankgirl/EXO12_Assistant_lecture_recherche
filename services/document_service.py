@@ -147,3 +147,27 @@ def add_to_db(uploaded_files, db, dossier_documents=None) -> tuple[str, str | No
 
     return "success", None
    
+# 🎓 À RETENIR : db.get() vs db.as_retriever().invoke(query) (voir run_rag_chain,
+# rag_chain.py) - deux facons differentes d'interroger Chroma. .get() recupere TOUT
+# le contenu stocke, sans notion de similarite ni de question - utile quand on veut
+# une vue d'ensemble du document entier (synthese, script de podcast).
+# .as_retriever().invoke(query) fait une recherche par similarite semantique, et ne
+# renvoie que les k passages les plus proches d'une question precise - utile pour
+# repondre a une question ciblee, pas pour tout relire.
+# Extraite ici le 2026-09-24 (etait avant dupliquee dans analyser_document) pour que
+# genere_script_2voix (podcast_service.py) puisse la reutiliser sans recopier la
+# logique - le cout de rappeler cette fonction deux fois est nul (lecture locale de
+# Chroma, pas un appel LLM), donc pas besoin de faire circuler le resultat entre les
+# deux boutons/reruns Streamlit.
+def recuperer_contenu_document(db) -> str:
+    """Recupere l'integralite du contenu stocke pour cette conversation.
+
+    Args:
+        db : la base vectorielle Chroma (meme instance que celle utilisee par
+            add_to_db/run_rag_chain/analyser_document, injectee depuis main.py).
+
+    Returns:
+        Tous les chunks du document, recolles en une seule chaine de texte.
+    """
+    tout_le_contenu = db.get()["documents"]
+    return "\n\n".join(tout_le_contenu)

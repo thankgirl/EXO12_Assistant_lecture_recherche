@@ -8,6 +8,7 @@ ajouter une classe ici, zero ligne a changer dans services/.
 from abc import ABC, abstractmethod  # module standard Python pour definir un "contrat"
 import os
 import glob
+from pathlib import Path
 from langchain_huggingface import HuggingFaceEmbeddings           # "cerveau n°1" local : texte -> vecteur
 from langchain_chroma import Chroma                               # base de données vectorielle locale
 from langchain_community.document_loaders import TextLoader       #loarder de fichiers TXT
@@ -50,7 +51,15 @@ class VectorProvider(ABC):
 class ChromeDb(VectorProvider):
     """Fournisseur concret pour la base db chrome"""
 
-    def __init__(self, collection_name: str , persist_directory: str = "./download_db"):
+    # persist_directory ancre sur __file__ (2026-09-24, meme principe que
+    # PROMPTS_DIR dans rag_chain.py/podcast_service.py) - PAS "./download_db"
+    # (chemin relatif au repertoire de travail COURANT du processus, pas au projet).
+    # Bug reel trouve ce jour : lancer streamlit depuis un dossier different (racine
+    # git-practice/ vs travail/) faisait atterrir les donnees dans un download_db
+    # different a chaque fois - plusieurs conversations "perdaient" leur contenu
+    # ChromaDB alors qu'il existait bel et bien, juste au mauvais endroit.
+    # __file__ = .../travail/providers/vector_store_provider.py -> .parent.parent = .../travail/
+    def __init__(self, collection_name: str, persist_directory: str = str(Path(__file__).parent.parent / "download_db")):
         # collection_name/persist_directory parametres (pas en dur) : permet a main.py
         # (MOD-2, l'assemblage) de choisir le nom - identifiant simple pour l'instant
         # (decide le 2026-08-27, pas le coeur de cet exercice) ; un vrai identifiant

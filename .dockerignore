@@ -17,8 +17,13 @@ LectureAssisteContexte/
 contexte_system/
 temp/
 
-# Niveau 2/3 (audio) et outils de test - pas concernes par ce deploiement niveau 1
-audio_local/
+# Niveau 2/3 (audio) et outils de test - la plupart pas concernes par ce deploiement,
+# SAUF les 2 fichiers modele Piper (palier 5, negation ci-dessous - "audio_local/*"
+# et non "audio_local/" : necessaire pour que les "!" fonctionnent, un dossier exclu
+# via un trait de fin ne peut pas etre "reouvert" fichier par fichier).
+audio_local/*
+!audio_local/fr_FR-siwis-medium.onnx
+!audio_local/fr_FR-siwis-medium.onnx.json
 simulations_contexte_manager/
 fichiers_test_manuel/
 model_registry.yaml

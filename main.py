@@ -38,7 +38,7 @@ from pathlib import Path
 from datetime import datetime
 import streamlit as st
 from dotenv import load_dotenv
-from services import run_rag_chain, analyser_document, add_to_db, LectureAssisteMemoire, context_system_read, context_system_write
+from services import run_rag_chain, analyser_document, add_to_db, synthese_conversation_vocale, genere_podcast, LectureAssisteMemoire, context_system_read, context_system_write
 from providers import ClaudeProvider, ChromeDb  # deja reexportee par providers/__init__.py, verifie
 from core import context_management
 from interfaces.schemas import StructureContext, StructureConversation
@@ -337,7 +337,11 @@ def main():
         # add_to_db de renvoyer la liste explicitement (moins de changement de
         # signature, meme resultat : ce que add_to_db vient d'y deplacer y est deja).
         if dossier_documents.exists():
-            fichiers_stockes = sorted(dossier_documents.glob("*"))
+            # .is_file() (ajoute le 2026-09-24) : sans ce filtre, le sous-dossier
+            # voice/ (script + audio du podcast, niveau 2) remonterait ici comme si
+            # c'etait un document source - glob("*") liste aussi les dossiers, pas
+            # seulement les fichiers.
+            fichiers_stockes = sorted(f for f in dossier_documents.glob("*") if f.is_file())
             if fichiers_stockes:
                 st.caption("📎 Document(s) source de cette conversation :")
                 for fichier in fichiers_stockes:
@@ -350,6 +354,83 @@ def main():
         # pas la possibilite de taper une question.
         with st.expander("Synthèse des documents de cette conversation", expanded=False):
             st.write(st.session_state.synthese)
+
+        # --- Niveau 2, palier 5 (2026-09-25) : lecture simple, une voix -----------
+        # Different du palier 4 (script de dialogue) : lit directement `resume` tel
+        # quel, aucun appel LLM supplementaire - juste la synthese `resume` deja
+        # calculee au niveau 1, passee a la synthese vocale.
+        chemin_audio_simple = dossier_documents / "voice" / "lecture_simple.wav"
+
+        st.markdown("---")
+        st.markdown("#### 🔊 Écouter la synthèse")
+
+        if chemin_audio_simple.exists():
+            st.audio(str(chemin_audio_simple))
+        elif st.button("Générer la lecture audio de la synthèse"):
+            with st.spinner("Génération de l'audio..."):
+                statut, resultat = synthese_conversation_vocale(
+                    memoire.context_path,
+                    f"LectureAssisteContext_{profil_id}_{st.session_state.id_conversation}.json",
+                    dossier_documents / "voice",
+                )
+            if statut == "succes":
+                st.audio(resultat)
+            else:
+                st.error(f"Échec de la génération audio : {resultat}")
+
+        # --- Niveau 2, palier 6 (2026-09-25) : podcast complet (script + audio) ---
+        # genere_podcast (podcast_service.py) enchaine les paliers 4 (script, LLM)
+        # et 6 (audio 2 voix, Dia2) en un seul appel - reutilise le script deja
+        # genere s'il existe (pas de rappel LLM redondant), voir son docstring.
+        # Separation visuelle (2026-09-24, remarque de thankgirl) : sans elle,
+        # l'enchainement bouton "Analyser"/synthese -> champs du podcast se lisait
+        # comme un seul bloc confus, alors que ce sont deux actions distinctes.
+        dossier_voice = dossier_documents / "voice"
+        chemin_script = dossier_voice / "script_podcast.txt"
+        chemin_podcast = dossier_voice / "podcast_deux_voix_output.wav"
+
+        st.markdown("---")
+        st.markdown("#### 🎙️ Générer un podcast à partir de ce document")
+
+        if chemin_podcast.exists():
+            st.audio(str(chemin_podcast))
+        else:
+            st.caption("Renseigne ces éléments pour générer le podcast :")
+            # Preferences demandees a l'utilisateur AVANT generation (2026-09-24,
+            # meme principe que `query` dans run_rag_chain : parametres optionnels
+            # injectes dans le prompt, voir script_dialogue.yaml). Valeurs par
+            # defaut raisonnables si l'utilisateur ne change rien. Ignorees si le
+            # script existe deja pour cette conversation (genere_podcast le
+            # reutilise tel quel).
+            niveau_public = st.selectbox(
+                "Niveau du public",
+                ["débutant", "intermédiaire", "expert"],
+                index=1,
+            )
+            ton = st.text_input(
+                "Ton souhaité (optionnel)",
+                placeholder="ex: décontracté, avec des exemples concrets",
+            )
+            points_particuliers = st.text_area(
+                "Points particuliers à absolument aborder (optionnel)",
+                placeholder="ex: insister sur X, éviter Y",
+            )
+            if st.button("Générer le podcast"):
+                with st.spinner("Génération du podcast (script puis audio, peut prendre du temps)..."):
+                    statut, resultat = genere_podcast(
+                        db, dossier_documents,
+                        niveau_public=niveau_public, ton=ton, points_particuliers=points_particuliers,
+                    )
+                if statut == "succes":
+                    st.audio(resultat)
+                else:
+                    st.error(f"Échec de la génération du podcast : {resultat}")
+
+        # Script texte pas destine a etre vu par l'utilisateur en usage normal
+        # (etape intermediaire avant l'audio) - aide au test uniquement.
+        if chemin_script.exists():
+            with st.expander("🧪 Test : aperçu du script généré (pas affiché en usage normal)", expanded=False):
+                st.text(chemin_script.read_text(encoding="utf-8"))
 
     st.markdown("---")
 
@@ -418,53 +499,6 @@ def main():
                 profil_id=profil_id,
                 echangesLLM=nouveaux_echanges,
             )
-
-    # --- Zone de test (2026-09-04) : core/context_manager.py, les 3 paliers ---
-    # Mise en commentaire le 2026-09-17 (demande de thankgirl) : on teste maintenant
-    # context_manager directement via de vraies conversations (ex: "qualite des
-    # donnees LLM" surchargee manuellement au-dela du seuil de depassement), ce
-    # panneau avec ses tailles de fichiers simulees et sa question sur la tarte aux
-    # pommes n'est plus necessaire pour l'instant - code garde tel quel, pas
-    # supprime, au cas ou utile a nouveau plus tard.
-    # st.markdown("---")
-    # with st.expander("🧪 Tester context_manager (3 paliers simulés)"):
-    #     SIMULATIONS_DIR = Path(__file__).parent / "simulations_contexte_manager"
-    #     paliers_test = {
-    #         "Palier 1 — résumé progressif (~170k tokens)": "palier_1_resume.json",
-    #         "Palier 2 — recherche sélective (~235k tokens)": "palier_2_recherche_selective.json",
-    #         "Palier 3 — nouvelle conversation (~285k tokens)": "palier_3_nouvelle_conversation.json",
-    #     }
-    #     choix = st.radio("Conversation simulée à tester", list(paliers_test.keys()))
-    #
-    #     # Palier 2 (recherche selective) : le fixture melange 8 echanges "marqueurs"
-    #     # (recette de tarte aux pommes, sujet totalement different du reste) parmi le
-    #     # contenu majoritaire - pose une question sur les pommes et verifie que le
-    #     # resultat retourne bien CES echanges-la (preuve visuelle que la selection
-    #     # suit la question, pas un choix arbitraire). Constate en testant le
-    #     # 2026-09-04 : avec un contenu homogene partout, impossible de voir la
-    #     # difference entre "ca marche" et "ca renvoie n'importe quoi".
-    #     if choix.startswith("Palier 2"):
-    #         st.caption(
-    #             "💡 Ce fixture contient 8 échanges sur un sujet totalement différent "
-    #             "(recette de tarte aux pommes) mêlés au reste — pose une question sur "
-    #             "les pommes pour vérifier que la recherche les retrouve bien, et pas "
-    #             "des échanges au hasard."
-    #         )
-    #     query_par_defaut = {
-    #         "Palier 2 — recherche sélective (~235k tokens)": "À quelle température et combien de temps cuit la tarte aux pommes ?",
-    #     }
-    #     query_test = st.text_input(
-    #         "Question de test (passée à context_management)",
-    #         value=query_par_defaut.get(choix, "Résume les points essentiels de cette conversation."),
-    #     )
-    #     if st.button("Lancer le test"):
-    #         chemin_fixture = SIMULATIONS_DIR / paliers_test[choix]
-    #         with st.spinner("Appel de context_management..."):
-    #             statut, message = context_management(str(chemin_fixture), query_test)
-    #         st.write(f"**Statut renvoyé :** `{statut}`")
-    #         st.write("**Message / action renvoyé :**")
-    #         st.write(message)
-
 
 if __name__ == "__main__":
     main()

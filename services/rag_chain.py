@@ -15,6 +15,7 @@ import os
 from langchain_core.prompts import ChatPromptTemplate  # gabarit de prompt avec des "trous" a remplir
 
 from providers import ClaudeProvider  # notre wrapper (MOD-3), pas LangChain directement
+from .document_service import recuperer_contenu_document
 
 load_dotenv()  # lit le fichier .env du dossier courant et remplit os.environ avec son contenu
 
@@ -130,11 +131,11 @@ def analyser_document(db, contexte_expertise: str) -> tuple[bool, str]:
         prompt_data_synthese = yaml.safe_load(f)
     template_synthese = prompt_data_synthese["rag_prompt"]["v1"]["template"]
 
-    # db.get() recupere TOUT le contenu stocke (pas une recherche par similarite -
-    # contrairement a run_rag_chain, il n'y a pas de question precise ici, on veut
-    # une vue d'ensemble du document entier pour la synthese).
-    tout_le_contenu = db.get()["documents"]
-    contexte_documentaire = "\n\n".join(tout_le_contenu)
+    # recuperer_contenu_document (document_service.py) : logique de recuperation
+    # extraite le 2026-09-24, reutilisee aussi par genere_script_2voix
+    # (podcast_service.py) - voir le commentaire au-dessus de sa definition pour le
+    # detail (db.get() vs recherche par similarite).
+    contexte_documentaire = recuperer_contenu_document(db)
 
     prompt_template = ChatPromptTemplate.from_template(template_synthese)
     prompt_final = prompt_template.format(

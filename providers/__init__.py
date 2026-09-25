@@ -13,6 +13,7 @@
 # - c'est ce point de depart qui permet a Python de retrouver le dossier providers/.
 from .LLM_providers import LLMProvider, ClaudeProvider, OpenAIProvider
 from .vector_store_provider import VectorProvider, ChromeDb
+from .voice import get_tts_provider, TTSProvider
 
-__all__ = ["LLMProvider", "ClaudeProvider", "OpenAIProvider","VectorProvider", "ChromeDb"]
+__all__ = ["LLMProvider", "ClaudeProvider", "OpenAIProvider","VectorProvider", "ChromeDb","get_tts_provider", "TTSProvider"]
 

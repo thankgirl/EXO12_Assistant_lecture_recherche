@@ -1,0 +1,14 @@
+# Groupe 5/5 — synthese vocale (niveau 2, palier 5 : lecture simple, une voix)
+# Voir requirements-deploy-1-core.txt pour l'explication du decoupage en plusieurs
+# fichiers.
+#
+# Uniquement Piper (francais, moteur par defaut de get_tts_provider("fr")) - pas
+# Kokoro (pas expose dans l'UI actuelle, get_tts_provider("fr") ne le choisit que si
+# engine="kokoro" explicitement demande) et pas dia2 (palier 6, exige un GPU CUDA
+# absent du sandbox OpenShift gratuit - reste un usage LOCAL uniquement, voir
+# ENONCE.md niveau 2). Grace a l'import paresseux dans Dia2Provider.__init__
+# (providers_tts.py), ne pas installer dia2 ne casse pas l'app au demarrage - le
+# bouton "Generer le podcast" echouera proprement (message d'erreur) si utilise en
+# ligne, au lieu de planter toute l'application.
+
+piper-tts==1.7.0

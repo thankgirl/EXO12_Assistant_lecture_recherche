@@ -1,4 +1,4 @@
-# requirements-deploy.txt — dependances du DEPLOIEMENT (niveau 1 uniquement)
+# requirements-deploy.txt — dependances du DEPLOIEMENT (niveau 1 + palier 5 du niveau 2)
 #
 # Ce fichier a ete SCINDE en 4 (2026-09-18) pour corriger un OOMKilled recurrent
 # sur la tache "build-image" du pipeline Tekton : un seul gros pip install fait
@@ -11,6 +11,9 @@
 #   - requirements-deploy-2-langchain.txt   (famille LangChain)
 #   - requirements-deploy-3-vectorstore.txt (chromadb, sentence-transformers)
 #   - requirements-deploy-4-documents.txt   (extraction documents, scikit-learn, anthropic)
+#   - requirements-deploy-5-audio.txt       (Piper, palier 5 niveau 2 - lecture simple
+#                                             une voix ; PAS Dia2/palier 6, exige un GPU
+#                                             absent du sandbox OpenShift, reste local)
 #
 # requirements.txt (a la racine, non utilise ici) reste un dump complet du venv
 # de l'exercice, niveau 1+2+3 melanges - non pertinent pour ce deploiement.

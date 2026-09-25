@@ -1,5 +1,6 @@
 from .rag_chain import run_rag_chain, analyser_document
-from .document_service import add_to_db
+from .document_service import add_to_db,recuperer_contenu_document
+from .podcast_service import genere_script_2voix, synthese_conversation_vocale, genere_podcast
 # LectureAssisteMemoire (classe, conversations) : il faut importer la classe elle-même,
 # puis l'appelant fait instance = LectureAssisteMemoire(profil_id) puis
 # instance.creer_conversation(...). Même principe que providers/__init__.py qui exporte
@@ -13,4 +14,6 @@ from .contexte_service import LectureAssisteMemoire, context_system_read, contex
 __all__ = [
     "run_rag_chain", "analyser_document", "add_to_db",
     "LectureAssisteMemoire", "context_system_read", "context_system_write",
+    "recuperer_contenu_document", "genere_script_2voix", "synthese_conversation_vocale",
+    "genere_podcast"
 ]

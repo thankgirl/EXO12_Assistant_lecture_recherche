@@ -1,10 +1,16 @@
-# Dockerfile — deploiement niveau 1 (RAG/conversations) de l'exercice 12
+# Dockerfile — deploiement niveau 1 (RAG/conversations) + palier 5 du niveau 2
+# (lecture simple, une voix) de l'exercice 12
 #
-# Construit le 2026-09-18. Ne prend QUE le niveau 1 (main.py + core/services/providers/
-# interfaces/prompts/config/governance) - pas audio_local/ (niveau 2/3), qui a ses
-# propres dependances lourdes (kokoro-onnx, piper-tts, dia2, torch CUDA...) sans rapport
-# avec ce qui est deploye ici. Voir requirements-deploy.txt pour le detail du choix des
-# dependances.
+# Construit le 2026-09-18, etendu le 2026-09-25 (palier 5). Prend le niveau 1
+# (main.py + core/services/providers/interfaces/prompts/config/governance) et
+# UNIQUEMENT les 2 fichiers modele Piper (francais, palier 5) - PAS le reste de
+# audio_local/ (scripts de demo, sorties .wav de test, modeles Kokoro/Dia2 non
+# utilises ici), et PAS dia2 (palier 6 : exige un GPU CUDA absent du sandbox
+# OpenShift gratuit, reste un usage LOCAL uniquement - voir ENONCE.md niveau 2).
+# Grace a l'import paresseux dans Dia2Provider.__init__ (providers/voice/providers_tts.py),
+# ne pas installer dia2 ne casse pas l'app au demarrage - seul le bouton "Generer le
+# podcast" echouera proprement si utilise en ligne. Voir requirements-deploy.txt pour
+# le detail du choix des dependances.
 
 # python:3.11-slim, pas "alpine" : les wheels precompilees scientifiques (numpy,
 # torch, scikit-learn) sont construites pour glibc, pas la musl libc d'alpine - les
@@ -27,7 +33,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # ces fichiers ne changent pas, Docker reutilise la couche d'installation deja
 # construite au lieu de tout reinstaller a chaque modification de main.py.
 COPY requirements-deploy-1-core.txt requirements-deploy-2-langchain.txt \
-     requirements-deploy-3-vectorstore.txt requirements-deploy-4-documents.txt .
+     requirements-deploy-3-vectorstore.txt requirements-deploy-4-documents.txt \
+     requirements-deploy-5-audio.txt .
 
 # torch en version CPU (pas la build CUDA "+cu128" du venv local - inutile et enorme
 # sans GPU dans le conteneur) - installe separement, depuis l'index officiel PyTorch
@@ -50,8 +57,9 @@ RUN pip install --no-cache-dir -r requirements-deploy-1-core.txt
 RUN pip install --no-cache-dir -r requirements-deploy-2-langchain.txt
 RUN pip install --no-cache-dir -r requirements-deploy-3-vectorstore.txt
 RUN pip install --no-cache-dir -r requirements-deploy-4-documents.txt
+RUN pip install --no-cache-dir -r requirements-deploy-5-audio.txt
 
-# Code de l'application - niveau 1 uniquement.
+# Code de l'application - niveau 1 + palier 5 du niveau 2.
 COPY main.py .
 COPY core/ core/
 COPY services/ services/
@@ -60,6 +68,12 @@ COPY interfaces/ interfaces/
 COPY prompts/ prompts/
 COPY config/ config/
 COPY governance/ governance/
+
+# Modele Piper (francais, palier 5) - seulement ces 2 fichiers, pas le reste de
+# audio_local/ (scripts de demo, sorties .wav de test, modeles non utilises ici).
+# AUDIO_MODELS_DIR (providers/voice/providers_tts.py) attend ce dossier au meme
+# niveau que main.py, ancre sur __file__ - voir AUDIO_LOCAL_MODE_OPERATOIRE.md.
+COPY audio_local/fr_FR-siwis-medium.onnx audio_local/fr_FR-siwis-medium.onnx.json audio_local/
 
 # ANTHROPIC_API_KEY : jamais copiee/codee ici (GESTION_CLES_API.md,
 # SETUP_PROCEDURE.md section 9) - fournie a l'execution via une variable
